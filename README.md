@@ -42,12 +42,4 @@ Solar plant installations require hardware items in quantities reaching the lakh
 
 ---
 
-## Team
-
-| Role | Responsibility |
-|---|---|
-| Flutter development | This repo — UI, services, integration |
-| ML team | TFLite model training and delivery |
-
----
 
