@@ -51,4 +51,3 @@ Solar plant installations require hardware items in quantities reaching the lakh
 
 ---
 
-*Built following the DocuMind 5 Laws — concept_log.md tracks every concept before it gets coded.*
