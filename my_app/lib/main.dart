@@ -75,8 +75,12 @@ class SolarCounterApp extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  AppRoutes — single source of truth for all
+//  named route strings. No duplicates.
+// ─────────────────────────────────────────────
 class AppRoutes {
-  AppRoutes._();
+  AppRoutes._(); // private constructor — never instantiate this
 
   static const String onboarding = '/onboarding';
   static const String setup      = '/setup';

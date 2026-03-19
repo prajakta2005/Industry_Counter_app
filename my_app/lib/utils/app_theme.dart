@@ -380,4 +380,6 @@ class AppTheme {
       ),
     );
   }
+
+  static Color? get primaryDark => null;
 }

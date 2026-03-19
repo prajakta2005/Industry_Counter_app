@@ -14,15 +14,10 @@ class SetupScreen extends StatefulWidget {
 }
 
 class _SetupScreenState extends State<SetupScreen> {
-
   final _nameController = TextEditingController();
   final _roleController = TextEditingController();
   final _siteController = TextEditingController();
-
-
   final _formKey = GlobalKey<FormState>();
-
-  // WHY: Shows a loading spinner on the button while saving to SharedPreferences
   bool _isLoading = false;
 
   @override
@@ -34,32 +29,21 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   Future<void> _handleSubmit() async {
-  
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
       final user = UserModel(
         name: _nameController.text.trim(),
         role: _roleController.text.trim(),
         site: _siteController.text.trim(),
       );
-
-      // Save to SharedPreferences via AuthService
       await AuthService().saveUser(user);
-
-     
       if (!mounted) return;
-
-    
       Navigator.of(context).pushAndRemoveUntil(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) =>
               const DashboardScreen(),
-         
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            // Fade + slight scale up — feels premium
             return FadeTransition(
               opacity: animation,
               child: ScaleTransition(
@@ -72,14 +56,13 @@ class _SetupScreenState extends State<SetupScreen> {
           },
           transitionDuration: const Duration(milliseconds: 500),
         ),
-        (route) => false, // WHY: removes all routes behind dashboard
+        (route) => false,
       );
     } catch (e) {
-      
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Something went wrong. Please try again.'),
+          content: const Text('Something went wrong. Please try again.'),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -92,11 +75,9 @@ class _SetupScreenState extends State<SetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-     
       resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: SingleChildScrollView(
-         
           physics: const BouncingScrollPhysics(),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -110,7 +91,6 @@ class _SetupScreenState extends State<SetupScreen> {
                 children: [
                   const SizedBox(height: AppTheme.spaceLG),
 
-                 
                   _TopBadge()
                       .animate()
                       .fadeIn(duration: 500.ms)
@@ -118,7 +98,6 @@ class _SetupScreenState extends State<SetupScreen> {
 
                   const SizedBox(height: AppTheme.spaceXL),
 
-                  
                   Text(
                     'Hello,',
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
@@ -161,8 +140,6 @@ class _SetupScreenState extends State<SetupScreen> {
 
                   const SizedBox(height: AppTheme.spaceXXL),
 
-                  
-
                   _AnimatedField(
                     controller: _nameController,
                     label: 'YOUR NAME',
@@ -198,7 +175,6 @@ class _SetupScreenState extends State<SetupScreen> {
                     label: 'SITE NAME',
                     hint: 'e.g. Pune Solar Plant 2',
                     delay: 600.ms,
-                   
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _handleSubmit(),
                     validator: (val) {
@@ -211,7 +187,6 @@ class _SetupScreenState extends State<SetupScreen> {
 
                   const SizedBox(height: AppTheme.spaceXL),
 
-                  
                   _SubmitButton(
                     isLoading: _isLoading,
                     onTap: _handleSubmit,
@@ -227,9 +202,7 @@ class _SetupScreenState extends State<SetupScreen> {
                       'Your info is saved only on this device',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
-                  )
-                      .animate()
-                      .fadeIn(duration: 500.ms, delay: 800.ms),
+                  ).animate().fadeIn(duration: 500.ms, delay: 800.ms),
                 ],
               ),
             ),
@@ -239,6 +212,7 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 }
+
 class _TopBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -300,7 +274,6 @@ class _AnimatedField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-       
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
@@ -315,11 +288,62 @@ class _AnimatedField extends StatelessWidget {
           validator: validator,
           textInputAction: textInputAction,
           onFieldSubmitted: onFieldSubmitted,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppTheme.textPrimary,
-              ),
+
+          // WHY: black text so it's readable on the white box
+          style: const TextStyle(
+            color: Color(0xFF1A1F36),
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+          ),
+
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: const TextStyle(
+              color: Color(0xFFB0B7C3),
+              fontSize: 16,
+            ),
+
+            // WHY white fill: the input box should be white
+            filled: true,
+            fillColor: Colors.white,
+
+            // WHY no underline — use OutlineInputBorder instead
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+              borderSide: const BorderSide(
+                color: Color(0xFFE2E4ED),
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+              borderSide: const BorderSide(
+                color: Color(0xFFE2E4ED),
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+              borderSide: const BorderSide(
+                color: AppTheme.accent,
+                width: 1.5,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+              borderSide: const BorderSide(
+                color: AppTheme.error,
+              ),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppTheme.radiusMD),
+              borderSide: const BorderSide(
+                color: AppTheme.error,
+                width: 1.5,
+              ),
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppTheme.spaceMD,
+              vertical: AppTheme.spaceMD,
+            ),
           ),
         ),
       ],
@@ -343,7 +367,6 @@ class _SubmitButton extends StatelessWidget {
       height: 56,
       child: ElevatedButton(
         onPressed: isLoading ? null : onTap,
-
         child: isLoading
             ? const SizedBox(
                 width: 22,
