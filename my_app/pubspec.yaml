@@ -10,61 +10,35 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # --- Camera ---
-  # WHY: Access the phone camera for photo capture and live feed
   camera: ^0.10.5+9
 
-  # --- TFLite ---
-  # WHY: Load and run the .tflite model on-device to get item count
   tflite_flutter: ^0.10.4
 
-  # --- Image processing ---
-  # WHY: Resize and decode images before passing them to TFLite
   image: ^4.1.7
 
-  # --- Local storage ---
-  # WHY: SQLite database so the app works fully offline
   sqflite: ^2.3.2
 
-  # WHY: Find the correct directory on the phone to store the database file
   path_provider: ^2.1.2
 
-  # WHY: Join file paths correctly across Android and iOS
   path: ^1.9.0
 
-  # --- Firebase ---
-  # WHY: Required base package — every Firebase feature needs this
   firebase_core: ^2.27.1
 
-  # WHY: Firestore cloud database for syncing logs across devices
   cloud_firestore: ^4.15.9
 
-  # --- Connectivity ---
-  # WHY: Check if the device is online before attempting Firebase sync
   connectivity_plus: ^5.0.2
 
-  # --- Excel export ---
-  # WHY: Generate .xlsx Excel files from log data for site managers
   syncfusion_flutter_xlsio: ^25.1.41
-
-  # WHY: Share the generated Excel file via WhatsApp, email, etc.
   share_plus: ^7.2.2
-
-  # --- State management ---
-  # WHY: Share data (current user, logs) between screens without messy callbacks
   provider: ^6.1.2
-
-  # --- Utilities ---
-  # WHY: Format dates as dd/MM/yyyy for display and Excel export
   intl: ^0.19.0
-
-  # WHY: Generate unique IDs for each log entry
   uuid: ^4.3.3
-
-  # Default Flutter icon package (keep this)
   cupertino_icons: ^1.0.6
   google_fonts: ^6.2.1
-
+  flutter_animate: ^4.5.0
+  animations: ^2.0.11
+  shared_preferences: ^2.2.3
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

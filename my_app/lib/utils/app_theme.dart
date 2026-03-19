@@ -1,24 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// =============================================================================
-// WHY THIS FILE EXISTS (Law 1)
-// Every visual decision lives here — colors, fonts, shapes, component styles.
-// Screens never hardcode colors or sizes directly. They always reference this.
-// Change one value here → entire app updates.
-// =============================================================================
 
 class AppTheme {
-  // ---------------------------------------------------------------------------
-  // PRIVATE CONSTRUCTOR
-  // WHY: AppTheme is never instantiated. It's a collection of static values.
-  // You use it as AppTheme.primary, AppTheme.lightTheme — never new AppTheme().
-  // ---------------------------------------------------------------------------
   AppTheme._();
 
-  // ---------------------------------------------------------------------------
-  // COLOR PALETTE
-  // ---------------------------------------------------------------------------
 
   static const Color primary       = Color(0xFF1A1F36);
   static const Color accent        = Color(0xFF00C896);
@@ -40,9 +26,6 @@ class AppTheme {
   static const Color darkCard       = Color(0xFF252B45);
   static const Color darkBorder     = Color(0xFF2E3553);
 
-  // ---------------------------------------------------------------------------
-  // SPACING
-  // ---------------------------------------------------------------------------
 
   static const double spaceXS      = 4.0;
   static const double spaceSM      = 8.0;
@@ -52,9 +35,6 @@ class AppTheme {
   static const double spaceXXL     = 48.0;
   static const double screenPadding = 20.0;
 
-  // ---------------------------------------------------------------------------
-  // BORDER RADIUS
-  // ---------------------------------------------------------------------------
 
   static const double radiusSM   = 8.0;
   static const double radiusMD   = 12.0;
@@ -68,11 +48,6 @@ class AppTheme {
   static const BorderRadius borderRadiusXL   = BorderRadius.all(Radius.circular(radiusXL));
   static const BorderRadius borderRadiusFull = BorderRadius.all(Radius.circular(radiusFull));
 
-  // ---------------------------------------------------------------------------
-  // TYPOGRAPHY
-  // WHY a getter and not const: GoogleFonts returns runtime objects, not
-  // compile-time constants. So textTheme must be a getter, never const.
-  // ---------------------------------------------------------------------------
 
   static TextTheme get textTheme => GoogleFonts.interTextTheme(
     const TextTheme(
@@ -197,7 +172,7 @@ class AppTheme {
       // Primary filled button — main CTA ("Save Log", "Count")
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primary,
+          backgroundColor: const Color(0xFF0F6E56),
           foregroundColor: Colors.white,
           minimumSize:     const Size(double.infinity, 54),
           shape: const RoundedRectangleBorder(borderRadius: borderRadiusMD),
