@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // TEMP: remove after Firestore test
 
 import '../utils/app_theme.dart';
 import '../services/auth_service.dart';
-import '../services/database_service.dart'; 
-import '../services/firebase_service.dart'; 
+import '../services/database_service.dart'; // WHY: real stats + recent logs
+import '../services/firebase_service.dart'; // WHY: background sync on dashboard load
 import '../models/user_model.dart';
 import '../models/log_entry.dart';
 import 'counter_screen.dart';
@@ -21,6 +22,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   late final Future<UserModel> _userFuture;
 
+  // ── real data replacing dummy ─────────────
   List<LogEntry> _recentLogs = [];
   LogStats       _stats      = LogStats.empty();
   bool           _isLoading  = true;
@@ -30,12 +32,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _userFuture = AuthService().getUser();
     _loadDashboardData();
+    // Background sync — fire and forget
+    // Runs every time dashboard loads so any
+    // offline-saved logs get pushed when back online
     FirebaseService().syncPendingLogs();
+
+    // TEMPORARY TEST — delete these lines after confirming Firestore works
+    FirebaseFirestore.instance
+        .collection('test')
+        .add({'msg': 'hello', 'time': DateTime.now().toString()})
+        .then((v) => debugPrint('✅ Firestore works: \${v.id}'))
+        .catchError((e) => debugPrint('❌ Firestore error: \$e'));
   }
 
+  // Called on first load AND when returning from
+  // counter/log form so stats stay fresh
   Future<void> _loadDashboardData() async {
     setState(() => _isLoading = true);
 
+    // Run both DB calls in parallel — no need to wait
+    // for one before starting the other
     final results = await Future.wait([
       DatabaseService().getRecentLogs(limit: 5),
       DatabaseService().getStats(),
@@ -59,6 +75,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           .then((_) {
             setState(() => _selectedIndex = 0);
             _loadDashboardData();
+    // Background sync — fire and forget
+    // Runs every time dashboard loads so any
+    // offline-saved logs get pushed when back online
     FirebaseService().syncPendingLogs();
           });
     } else if (index == 2) {
@@ -194,6 +213,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 }
+
+// ─────────────────────────────────────────────
+//  Top bar — unchanged
+// ─────────────────────────────────────────────
 class _TopBar extends StatelessWidget {
   final String greeting;
   final UserModel user;
@@ -268,6 +291,9 @@ class _TopBar extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  Start counting card — unchanged
+// ─────────────────────────────────────────────
 class _StartCountingCard extends StatelessWidget {
   final VoidCallback onTap;
   const _StartCountingCard({required this.onTap});
@@ -340,6 +366,9 @@ class _StartCountingCard extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  Stats row — now receives real LogStats
+// ─────────────────────────────────────────────
 class _StatsRow extends StatelessWidget {
   final LogStats stats;
   final bool isLoading;
@@ -369,6 +398,9 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  Stat card — unchanged
+// ─────────────────────────────────────────────
 class _StatCard extends StatelessWidget {
   final String value;
   final String label;
@@ -435,6 +467,9 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  Section header — unchanged
+// ─────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
   final String title;
   final String actionLabel;
@@ -473,6 +508,10 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────
+//  Log tile — unchanged
+// ─────────────────────────────────────────────
 class _LogTile extends StatelessWidget {
   final LogEntry entry;
   const _LogTile({required this.entry});
@@ -573,6 +612,9 @@ class _LogTile extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  Bottom nav — unchanged
+// ─────────────────────────────────────────────
 class _BottomNav extends StatelessWidget {
   final int selectedIndex;
   final void Function(int) onTap;
