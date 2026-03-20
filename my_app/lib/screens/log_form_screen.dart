@@ -95,6 +95,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
   }
 
   Future<void> _pickDate() async {
+    FocusScope.of(context).unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _issueDate,
@@ -156,6 +157,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
@@ -185,14 +187,14 @@ class _LogFormScreenState extends State<LogFormScreen> {
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: Colors.white, size: 20),
+                color: Colors.black, size: 20),
           ),
           const Expanded(
             child: Text(
               'New Log Entry',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white,
+                color: AppTheme.accent,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
@@ -221,11 +223,14 @@ class _LogFormScreenState extends State<LogFormScreen> {
             icon: Icons.tag_rounded,
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Lot number is required' : null,
-          ),
+          ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.15, end: 0, delay: 50.ms, duration: 350.ms),
 
           const SizedBox(height: 16),
 
-          _buildMaterialDropdown(),
+          _buildMaterialDropdown()
+              .animate()
+              .fadeIn(delay: 100.ms)
+              .slideY(begin: 0.15, end: 0, delay: 100.ms, duration: 350.ms),
 
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
@@ -242,7 +247,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
                               (v == null || v.trim().isEmpty))
                           ? 'Please specify the material'
                           : null,
-                    ),
+                    ).animate().fadeIn(duration: 250.ms),
                   )
                 : const SizedBox.shrink(),
           ),
@@ -262,7 +267,10 @@ class _LogFormScreenState extends State<LogFormScreen> {
               if (n == null || n <= 0) return 'Enter a valid quantity';
               return null;
             },
-          ),
+          )
+              .animate()
+              .fadeIn(delay: 150.ms)
+              .slideY(begin: 0.15, end: 0, delay: 150.ms, duration: 350.ms),
 
           const SizedBox(height: 28),
 
@@ -276,11 +284,17 @@ class _LogFormScreenState extends State<LogFormScreen> {
             icon: Icons.person_outline_rounded,
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Issued to is required' : null,
-          ),
+          )
+              .animate()
+              .fadeIn(delay: 200.ms)
+              .slideY(begin: 0.15, end: 0, delay: 200.ms, duration: 350.ms),
 
           const SizedBox(height: 16),
 
-          _buildDateField(),
+          _buildDateField()
+              .animate()
+              .fadeIn(delay: 250.ms)
+              .slideY(begin: 0.15, end: 0, delay: 250.ms, duration: 350.ms),
 
           const SizedBox(height: 28),
 
@@ -291,7 +305,10 @@ class _LogFormScreenState extends State<LogFormScreen> {
             label: 'Counted By',
             value: _user.name.isNotEmpty ? _user.name : '—',
             icon: Icons.badge_outlined,
-          ),
+          )
+              .animate()
+              .fadeIn(delay: 300.ms)
+              .slideY(begin: 0.15, end: 0, delay: 300.ms, duration: 350.ms),
 
           const SizedBox(height: 16),
 
@@ -299,11 +316,17 @@ class _LogFormScreenState extends State<LogFormScreen> {
             label: 'Site',
             value: _user.site.isNotEmpty ? _user.site : '—',
             icon: Icons.location_on_outlined,
-          ),
+          )
+              .animate()
+              .fadeIn(delay: 350.ms)
+              .slideY(begin: 0.15, end: 0, delay: 350.ms, duration: 350.ms),
 
           const SizedBox(height: 36),
 
-          _buildSaveButton(),
+          _buildSaveButton()
+              .animate()
+              .fadeIn(delay: 400.ms)
+              .slideY(begin: 0.2, end: 0, delay: 400.ms, duration: 400.ms),
         ],
       ),
     );
@@ -350,7 +373,26 @@ class _LogFormScreenState extends State<LogFormScreen> {
             color: AppTheme.textSecondary.withOpacity(0.5), fontSize: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.accent, width: 1.8),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.redAccent),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1.8),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
     );
   }
@@ -369,6 +411,30 @@ class _LogFormScreenState extends State<LogFormScreen> {
           if (!_showOtherField) _otherMatCtrl.clear();
         });
       },
+      style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+      dropdownColor: Colors.white,
+      decoration: InputDecoration(
+        labelText: 'Material Type',
+        prefixIcon: Icon(Icons.category_outlined,
+            size: 20, color: AppTheme.textSecondary),
+        filled: true,
+        fillColor: Colors.white,
+        labelStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppTheme.accent, width: 1.8),
+        ),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
     );
   }
 
@@ -380,6 +446,32 @@ class _LogFormScreenState extends State<LogFormScreen> {
         child: TextFormField(
           readOnly: true,
           controller: TextEditingController(text: formatted),
+          style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+          decoration: InputDecoration(
+            labelText: 'Issue Date',
+            prefixIcon: Icon(Icons.calendar_today_outlined,
+                size: 20, color: AppTheme.textSecondary),
+            suffixIcon: Icon(Icons.arrow_drop_down_rounded,
+                color: AppTheme.textSecondary),
+            filled: true,
+            fillColor: Colors.white,
+            labelStyle:
+                TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppTheme.accent, width: 1.8),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
         ),
       ),
     );
@@ -390,27 +482,81 @@ class _LogFormScreenState extends State<LogFormScreen> {
     required String value,
     required IconData icon,
   }) {
-    return Row(
-      children: [
-        Icon(icon),
-        const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label),
-            Text(value),
-          ],
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.black, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 4),
+                Text(value,
+                    style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildSaveButton() {
-    return ElevatedButton(
-      onPressed: _isSaving ? null : _saveLog,
-      child: _isSaving
-          ? const CircularProgressIndicator(color: Colors.white)
-          : const Text('Save Log Entry'),
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: ElevatedButton(
+        onPressed: _isSaving ? null : _saveLog,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.accent,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: AppTheme.accent.withOpacity(0.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          elevation: 0,
+        ),
+        child: _isSaving
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              )
+            : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle_outline_rounded, size: 20),
+                  SizedBox(width: 10),
+                  Text(
+                    'Save Log Entry',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }
@@ -440,8 +586,95 @@ class _SuccessScreenState extends State<_SuccessScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.primaryDark,
-      body: const Center(
-        child: Text('Log Saved!', style: TextStyle(color: Colors.white)),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 96,
+                  height: 96,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppTheme.accent.withOpacity(0.15),
+                    border: Border.all(color: AppTheme.accent, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: AppTheme.accent,
+                    size: 52,
+                  ),
+                )
+                    .animate()
+                    .scale(
+                        begin: const Offset(0.3, 0.3),
+                        end: const Offset(1.0, 1.0),
+                        duration: 500.ms,
+                        curve: Curves.elasticOut)
+                    .fadeIn(duration: 300.ms),
+
+                const SizedBox(height: 28),
+
+                const Text(
+                  'Log Saved!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
+                )
+                    .animate()
+                    .fadeIn(delay: 300.ms, duration: 400.ms)
+                    .slideY(
+                        begin: 0.2,
+                        end: 0,
+                        delay: 300.ms,
+                        duration: 400.ms,
+                        curve: Curves.easeOutCubic),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  '${widget.entry.quantity} ${widget.entry.materialType} · ${widget.entry.lotNumber}',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.6),
+                    fontSize: 15,
+                  ),
+                  textAlign: TextAlign.center,
+                )
+                    .animate()
+                    .fadeIn(delay: 450.ms, duration: 400.ms),
+
+                const SizedBox(height: 48),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        color: Colors.white.withOpacity(0.4),
+                        strokeWidth: 1.5,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Returning to dashboard…',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.4),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ).animate().fadeIn(delay: 700.ms, duration: 400.ms),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

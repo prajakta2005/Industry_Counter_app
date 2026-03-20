@@ -131,9 +131,11 @@ class _SetupScreenState extends State<SetupScreen> {
                   const SizedBox(height: AppTheme.spaceSM),
 
                   Text(
-                    'Tell us who you are before\nwe head to the site.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  )
+  'Tell us who you are before\nwe head to the site.',
+  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+        color: AppTheme.textPrimary.withOpacity(0.85),
+      ),
+)
                       .animate()
                       .fadeIn(duration: 500.ms, delay: 300.ms)
                       .slideY(begin: 0.2, end: 0, curve: Curves.easeOut),
@@ -238,7 +240,7 @@ class _TopBadge extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'SOLAR HARDWARE COUNTER',
+            'NEXCOUNT HARDWARE COUNTER',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: AppTheme.accentDark,
                   letterSpacing: 0.8,

@@ -23,13 +23,6 @@ void main() async {
 
   Animate.restartOnHotReload = true;
 
-  // WHY check both flags:
-  // onboarding_seen → has user seen the 4 intro slides?
-  // isUserSetup     → has user entered their name/role/site?
-  // Three possible states:
-  //   1. Brand new user    → show Onboarding
-  //   2. Saw onboarding    → show Setup (hasn't filled details yet)
-  //   3. Fully set up      → show WelcomeBack
   final prefs = await SharedPreferences.getInstance();
   final bool onboardingSeen = prefs.getBool('onboarding_seen') ?? false;
   final bool isSetup = await AuthService().isUserSetup();
@@ -53,7 +46,7 @@ class SolarCounterApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Solar Hardware Counter',
+      title: 'NexCount',
       debugShowCheckedModeBanner: false,
       theme:     AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
