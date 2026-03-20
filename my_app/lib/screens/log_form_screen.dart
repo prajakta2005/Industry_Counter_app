@@ -8,8 +8,10 @@ import '../utils/app_theme.dart';
 import '../models/log_entry.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
-import '../services/database_service.dart'; // WHY: real save replaces debugPrint
+import '../services/database_service.dart'; 
+import '../services/firebase_service.dart'; 
 import '../main.dart'; 
+
 const List<String> _kMaterialOptions = [
   'Bolts',
   'Nuts',
@@ -103,7 +105,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
   Future<void> _pickDate() async {
     FocusScope.of(context).unfocus();
 
-    // Small delay so keyboard fully dismisses before dialog opens
+   
     await Future.delayed(const Duration(milliseconds: 100));
     if (!mounted) return;
 
@@ -155,14 +157,12 @@ class _LogFormScreenState extends State<LogFormScreen> {
       site:         _user.site,
       isSynced:     false,
     );
-
-    // Step 8: real SQLite save — no more fake delay
     await DatabaseService().insertLog(entry);
+    FirebaseService().syncPendingLogs();
 
     if (!mounted) return;
     setState(() => _isSaving = false);
 
-    // Navigate to success screen
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => _SuccessScreen(entry: entry),
@@ -196,7 +196,6 @@ class _LogFormScreenState extends State<LogFormScreen> {
       ),
     );
   }
-
   Widget _buildTopBar() {
     return Container(
       color: AppTheme.primaryDark,
@@ -213,14 +212,14 @@ class _LogFormScreenState extends State<LogFormScreen> {
               'New Log Entry',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppTheme.accent,
+                color: AppTheme.accentDark,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.3,
               ),
             ),
           ),
-          const SizedBox(width: 48), // balance back arrow
+          const SizedBox(width: 48), 
         ],
       ),
     );
@@ -232,11 +231,9 @@ class _LogFormScreenState extends State<LogFormScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
         children: [
-          // ── section: hardware details ──
           _sectionLabel('Hardware Details'),
           const SizedBox(height: 12),
 
-          // Lot number
           _buildTextInput(
             controller: _lotNumberCtrl,
             label: 'Lot Number',
@@ -362,6 +359,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
       ),
     );
   }
+
   Widget _sectionLabel(String text) {
     return Text(
       text.toUpperCase(),
@@ -373,7 +371,6 @@ class _LogFormScreenState extends State<LogFormScreen> {
       ),
     );
   }
-
   Widget _buildTextInput({
     required TextEditingController controller,
     required String label,
@@ -554,6 +551,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
       ),
     );
   }
+
   Widget _buildSaveButton() {
     return SizedBox(
       width: double.infinity,

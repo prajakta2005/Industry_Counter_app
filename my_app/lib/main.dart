@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; 
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,9 @@ import 'screens/reports_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase before anything else runs
+  await Firebase.initializeApp();
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -46,7 +50,7 @@ class SolarCounterApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'NexCount',
+      title: 'Solar Hardware Counter',
       debugShowCheckedModeBanner: false,
       theme:     AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
@@ -67,13 +71,8 @@ class SolarCounterApp extends StatelessWidget {
     );
   }
 }
-
-// ─────────────────────────────────────────────
-//  AppRoutes — single source of truth for all
-//  named route strings. No duplicates.
-// ─────────────────────────────────────────────
 class AppRoutes {
-  AppRoutes._(); // private constructor — never instantiate this
+  AppRoutes._();
 
   static const String onboarding = '/onboarding';
   static const String setup      = '/setup';

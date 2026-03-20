@@ -4,8 +4,11 @@ import 'package:intl/intl.dart';
 
 import '../utils/app_theme.dart';
 import '../models/log_entry.dart';
-import '../services/database_service.dart'; // WHY: real logs replace dummy list
-import '../main.dart'; 
+import '../services/database_service.dart';
+import '../services/excel_service.dart';
+import '../main.dart';
+
+// ── material colors ───────────────────────────
 const Map<String, Color> _kMaterialColors = {
   'Bolts':   Color(0xFF4A90D9),
   'Nuts':    Color(0xFFE8A838),
@@ -18,120 +21,9 @@ const Map<String, Color> _kMaterialColors = {
 Color _colorFor(String material) =>
     _kMaterialColors[material] ?? _kMaterialColors['Other']!;
 
-final List<LogEntry> _dummyLogs = [
-  LogEntry(
-    id: 'dummy-1',
-    lotNumber: 'LOT-2024-001',
-    materialType: 'Bolts',
-    quantity: 42,
-    issuedTo: 'Ravi Kumar',
-    countedBy: 'Prajakta',
-    issueDate: DateTime.now().subtract(const Duration(days: 0)),
-    site: 'Site A',
-    isSynced: false,
-  ),
-  LogEntry(
-    id: 'dummy-2',
-    lotNumber: 'LOT-2024-002',
-    materialType: 'Nuts',
-    quantity: 120,
-    issuedTo: 'Suresh Patil',
-    countedBy: 'Prajakta',
-    issueDate: DateTime.now().subtract(const Duration(days: 1)),
-    site: 'Site A',
-    isSynced: true,
-  ),
-  LogEntry(
-    id: 'dummy-3',
-    lotNumber: 'LOT-2024-003',
-    materialType: 'Washers',
-    quantity: 85,
-    issuedTo: 'Anita Desai',
-    countedBy: 'Prajakta',
-    issueDate: DateTime.now().subtract(const Duration(days: 2)),
-    site: 'Site B',
-    isSynced: true,
-  ),
-  LogEntry(
-    id: 'dummy-4',
-    lotNumber: 'LOT-2024-004',
-    materialType: 'Screws',
-    quantity: 200,
-    issuedTo: 'Mohit Sharma',
-    countedBy: 'Prajakta',
-    issueDate: DateTime.now().subtract(const Duration(days: 3)),
-    site: 'Site B',
-    isSynced: false,
-  ),
-  LogEntry(
-    id: 'dummy-5',
-    lotNumber: 'LOT-2024-005',
-    materialType: 'Clips',
-    quantity: 60,
-    issuedTo: 'Neha Joshi',
-    countedBy: 'Prajakta',
-    issueDate: DateTime.now().subtract(const Duration(days: 5)),
-    site: 'Site A',
-    isSynced: true,
-  ),
-  LogEntry(
-    id: 'dummy-6',
-    lotNumber: 'LOT-2024-006',
-    materialType: 'Bolts',
-    quantity: 95,
-    issuedTo: 'Arjun Mehta',
-    countedBy: 'Prajakta',
-    issueDate: DateTime.now().subtract(const Duration(days: 6)),
-    site: 'Site C',
-    isSynced: true,
-  ),
-  LogEntry(
-    id: 'dummy-7',
-    lotNumber: 'LOT-2024-007',
-    materialType: 'Washers',
-    quantity: 310,
-    issuedTo: 'Divya Rane',
-    countedBy: 'Prajakta',
-    issueDate: DateTime.now().subtract(const Duration(days: 7)),
-    site: 'Site B',
-    isSynced: false,
-  ),
-  LogEntry(
-    id: 'dummy-8',
-    lotNumber: 'LOT-2024-008',
-    materialType: 'Nuts',
-    quantity: 74,
-    issuedTo: 'Sameer Khan',
-    countedBy: 'Prajakta',
-    issueDate: DateTime.now().subtract(const Duration(days: 8)),
-    site: 'Site A',
-    isSynced: true,
-  ),
-  LogEntry(
-    id: 'dummy-9',
-    lotNumber: 'LOT-2024-009',
-    materialType: 'Screws',
-    quantity: 180,
-    issuedTo: 'Pooja Iyer',
-    countedBy: 'Prajakta',
-    issueDate: DateTime.now().subtract(const Duration(days: 10)),
-    site: 'Site C',
-    isSynced: false,
-  ),
-  LogEntry(
-    id: 'dummy-10',
-    lotNumber: 'LOT-2024-010',
-    materialType: 'Other',
-    quantity: 33,
-    issuedTo: 'Rahul Desai',
-    countedBy: 'Prajakta',
-    issueDate: DateTime.now().subtract(const Duration(days: 12)),
-    site: 'Site B',
-    isSynced: true,
-  ),
-];
-
-
+// ─────────────────────────────────────────────
+//  ReportsScreen
+// ─────────────────────────────────────────────
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
 
@@ -140,14 +32,11 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-
   String _activeFilter = 'All';
-  bool   _newestFirst  = true; // true = newest → oldest
-  bool   _isLoading    = true; // true while fetching from DB
+  bool   _newestFirst  = true;
+  bool   _isLoading    = true;
 
-  // All filter chip labels
   final List<String> _filters = ['All', ..._kMaterialColors.keys];
-
   List<LogEntry> _allLogs = [];
 
   @override
@@ -166,21 +55,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     });
   }
 
-  // ── derived list ──────────────────────────
   List<LogEntry> get _filteredLogs {
-    // Use real DB data — _allLogs populated in initState
     var logs = List<LogEntry>.from(_allLogs);
-
-    // Filter
     if (_activeFilter != 'All') {
       logs = logs.where((e) => e.materialType == _activeFilter).toList();
     }
-
-    // Sort
     logs.sort((a, b) => _newestFirst
         ? b.issueDate.compareTo(a.issueDate)
         : a.issueDate.compareTo(b.issueDate));
-
     return logs;
   }
 
@@ -196,30 +78,35 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  void _onExportConfirmed() {
-    Navigator.of(context).pop(); 
+  Future<void> _onExportConfirmed() async {
+    Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Row(
           children: [
-            Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
-            SizedBox(width: 10),
-            Text('Excel export wired in Step 9'),
+            SizedBox(
+              width: 14, height: 14,
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Text('Generating Excel report…'),
           ],
         ),
         backgroundColor: AppTheme.primaryDark,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
       ),
     );
+    await ExcelService().generateAndShare(_filteredLogs);
   }
 
   void _showDetailSheet(LogEntry entry) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      isScrollControlled: true, // allows taller sheet
+      isScrollControlled: true,
       builder: (_) => _DetailSheet(entry: entry),
     );
   }
@@ -249,7 +136,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
       child: Row(
         children: [
-          // Title + count
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,7 +152,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Text(
                   '${_filteredLogs.length} entries',
                   style: TextStyle(
-                    color: Colors.black.withOpacity(0.45),
+                    color: AppTheme.accent,
                     fontSize: 13,
                   ),
                 ),
@@ -274,7 +160,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
           ),
           Tooltip(
-            message: _newestFirst ? 'Sorted by date: newest first' : 'Sorted by date: oldest first',
+            message: _newestFirst
+                ? 'Sorted by date: newest first'
+                : 'Sorted by date: oldest first',
             child: InkWell(
               onTap: () => setState(() => _newestFirst = !_newestFirst),
               borderRadius: BorderRadius.circular(8),
@@ -308,15 +196,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
             ),
           ),
-
-          // Export button
           IconButton(
             onPressed: _showExportSheet,
-            icon: const Icon(
-              Icons.ios_share_rounded,
-              color: AppTheme.accent,
-              size: 22,
-            ),
+            icon: const Icon(Icons.ios_share_rounded, color: AppTheme.accent, size: 22),
             tooltip: 'Export to Excel',
           ),
         ],
@@ -324,9 +206,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  // ─────────────────────────────────────────
-  //  Filter chips row
-  // ─────────────────────────────────────────
   Widget _buildFilterRow() {
     return Container(
       color: AppTheme.primaryDark,
@@ -342,8 +221,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 onTap: () => setState(() => _activeFilter = f),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
                     color: isActive
                         ? AppTheme.accent
@@ -362,9 +240,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           ? Colors.white
                           : Colors.white.withOpacity(0.65),
                       fontSize: 13,
-                      fontWeight: isActive
-                          ? FontWeight.w600
-                          : FontWeight.w400,
+                      fontWeight:
+                          isActive ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
                 ),
@@ -377,20 +254,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildLogList() {
-    // Show spinner while first DB load is in progress
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: AppTheme.accent,
-          strokeWidth: 2,
-        ),
+        child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2),
       );
     }
-
     final logs = _filteredLogs;
-
     if (logs.isEmpty) return _buildEmptyState();
-
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       itemCount: logs.length,
@@ -401,12 +271,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       )
           .animate()
           .fadeIn(delay: (i * 60).ms, duration: 300.ms)
-          .slideY(
-              begin: 0.1,
-              end: 0,
-              delay: (i * 60).ms,
-              duration: 300.ms,
-              curve: Curves.easeOutCubic),
+          .slideY(begin: 0.1, end: 0, delay: (i * 60).ms, duration: 300.ms, curve: Curves.easeOutCubic),
     );
   }
 
@@ -417,49 +282,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: 64,
-              color: AppTheme.textSecondary.withOpacity(0.4),
-            )
-                .animate()
-                .fadeIn(duration: 400.ms)
+            Icon(Icons.inbox_outlined, size: 64,
+                color: AppTheme.textSecondary.withOpacity(0.4))
+                .animate().fadeIn(duration: 400.ms)
                 .scaleXY(begin: 0.8, end: 1.0, duration: 400.ms),
             const SizedBox(height: 16),
             Text(
-              _activeFilter == 'All'
-                  ? 'No logs yet'
-                  : 'No $_activeFilter logs',
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              _activeFilter == 'All' ? 'No logs yet' : 'No $_activeFilter logs',
+              style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
             ).animate().fadeIn(delay: 100.ms),
             const SizedBox(height: 8),
             Text(
               'Start counting hardware to\ncreate your first log entry.',
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 14,
-                height: 1.5,
-              ),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.5),
               textAlign: TextAlign.center,
             ).animate().fadeIn(delay: 200.ms),
             const SizedBox(height: 28),
             ElevatedButton.icon(
-              onPressed: () =>
-                  Navigator.of(context).pushNamed(AppRoutes.counter),
+              onPressed: () => Navigator.of(context).pushNamed(AppRoutes.counter),
               icon: const Icon(Icons.camera_alt_outlined, size: 18),
               label: const Text('Start Counting'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.accent,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
             ).animate().fadeIn(delay: 300.ms),
@@ -474,11 +321,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.07),
-            blurRadius: 12,
-            offset: const Offset(0, -3),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.07), blurRadius: 12, offset: const Offset(0, -3)),
         ],
       ),
       child: SafeArea(
@@ -493,23 +336,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 activeIcon: Icons.home_rounded,
                 label: 'Home',
                 isActive: false,
-                onTap: () => Navigator.of(context)
-                    .pushReplacementNamed(AppRoutes.dashboard),
+                onTap: () => Navigator.of(context).pushReplacementNamed(AppRoutes.dashboard),
               ),
               _NavItem(
                 icon: Icons.camera_alt_outlined,
                 activeIcon: Icons.camera_alt_rounded,
                 label: 'Counter',
                 isActive: false,
-                onTap: () =>
-                    Navigator.of(context).pushNamed(AppRoutes.counter),
+                onTap: () => Navigator.of(context).pushNamed(AppRoutes.counter),
               ),
               _NavItem(
                 icon: Icons.bar_chart_outlined,
                 activeIcon: Icons.bar_chart_rounded,
                 label: 'Reports',
                 isActive: true,
-                onTap: () {}, // already here
+                onTap: () {},
               ),
             ],
           ),
@@ -517,18 +358,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     );
   }
-}
+} // ← _ReportsScreenState ends here
+
+// ─────────────────────────────────────────────
+//  _LogTile
+// ─────────────────────────────────────────────
 class _LogTile extends StatelessWidget {
   final LogEntry entry;
   final VoidCallback onTap;
-
   const _LogTile({required this.entry, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final color     = _colorFor(entry.materialType);
-    final dateStr   = DateFormat('dd MMM yyyy').format(entry.issueDate);
-
+    final color   = _colorFor(entry.materialType);
+    final dateStr = DateFormat('dd MMM yyyy').format(entry.issueDate);
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(14),
@@ -539,10 +382,8 @@ class _LogTile extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
-              // Color dot + material icon
               Container(
-                width: 46,
-                height: 46,
+                width: 46, height: 46,
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(12),
@@ -550,27 +391,17 @@ class _LogTile extends StatelessWidget {
                 child: Icon(Icons.hardware_outlined, color: color, size: 22),
               ),
               const SizedBox(width: 14),
-
-              // Main info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Text(
-                          entry.materialType,
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        Text(entry.materialType,
+                            style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
                         const SizedBox(width: 8),
-                        // Sync badge
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
                             color: entry.isSynced
                                 ? Colors.green.withOpacity(0.12)
@@ -585,9 +416,7 @@ class _LogTile extends StatelessWidget {
                                     ? Icons.cloud_done_outlined
                                     : Icons.cloud_upload_outlined,
                                 size: 11,
-                                color: entry.isSynced
-                                    ? Colors.green
-                                    : Colors.amber.shade700,
+                                color: entry.isSynced ? Colors.green : Colors.amber.shade700,
                               ),
                               const SizedBox(width: 3),
                               Text(
@@ -595,9 +424,7 @@ class _LogTile extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w600,
-                                  color: entry.isSynced
-                                      ? Colors.green
-                                      : Colors.amber.shade700,
+                                  color: entry.isSynced ? Colors.green : Colors.amber.shade700,
                                 ),
                               ),
                             ],
@@ -608,47 +435,26 @@ class _LogTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       '${entry.lotNumber} · ${entry.issuedTo}',
-                      style: TextStyle(
-                        color: AppTheme.textSecondary,
-                        fontSize: 13,
-                      ),
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
                       dateStr,
-                      style: TextStyle(
-                        color: AppTheme.textSecondary.withOpacity(0.6),
-                        fontSize: 12,
-                      ),
+                      style: TextStyle(color: AppTheme.textSecondary.withOpacity(0.6), fontSize: 12),
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(width: 10),
-
-              // Quantity (big)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    '${entry.quantity}',
-                    style: TextStyle(
-                      color: color,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
-                      height: 1.0,
-                    ),
-                  ),
-                  Text(
-                    'items',
-                    style: TextStyle(
-                      color: AppTheme.textSecondary.withOpacity(0.5),
-                      fontSize: 11,
-                    ),
-                  ),
+                  Text('${entry.quantity}',
+                      style: TextStyle(color: color, fontSize: 26, fontWeight: FontWeight.w800, height: 1.0)),
+                  Text('items',
+                      style: TextStyle(color: AppTheme.textSecondary.withOpacity(0.5), fontSize: 11)),
                 ],
               ),
             ],
@@ -659,6 +465,9 @@ class _LogTile extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  _DetailSheet
+// ─────────────────────────────────────────────
 class _DetailSheet extends StatelessWidget {
   final LogEntry entry;
   const _DetailSheet({required this.entry});
@@ -667,7 +476,6 @@ class _DetailSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final color   = _colorFor(entry.materialType);
     final dateStr = DateFormat('dd MMM yyyy').format(entry.issueDate);
-
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -678,25 +486,17 @@ class _DetailSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handle
           Center(
             child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 20),
-
-          // Material + quantity hero
           Row(
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 52, height: 52,
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(14),
@@ -707,55 +507,29 @@ class _DetailSheet extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    entry.materialType,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  Text(
-                    '${entry.quantity} items counted',
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 14,
-                    ),
-                  ),
+                  Text(entry.materialType,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                  Text('${entry.quantity} items counted',
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
                 ],
               ),
             ],
-          )
-              .animate()
-              .fadeIn(duration: 300.ms)
-              .slideY(begin: 0.1, end: 0, duration: 300.ms),
-
+          ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0, duration: 300.ms),
           const SizedBox(height: 24),
           Divider(color: Colors.grey.shade200),
           const SizedBox(height: 16),
-
-          // Detail rows
-          _DetailRow(icon: Icons.tag_rounded,
-              label: 'Lot Number', value: entry.lotNumber),
-          _DetailRow(icon: Icons.person_outline_rounded,
-              label: 'Issued To', value: entry.issuedTo),
-          _DetailRow(icon: Icons.badge_outlined,
-              label: 'Counted By', value: entry.countedBy),
-          _DetailRow(icon: Icons.location_on_outlined,
-              label: 'Site', value: entry.site),
-          _DetailRow(icon: Icons.calendar_today_outlined,
-              label: 'Issue Date', value: dateStr),
+          _DetailRow(icon: Icons.tag_rounded,             label: 'Lot Number', value: entry.lotNumber),
+          _DetailRow(icon: Icons.person_outline_rounded,  label: 'Issued To',  value: entry.issuedTo),
+          _DetailRow(icon: Icons.badge_outlined,          label: 'Counted By', value: entry.countedBy),
+          _DetailRow(icon: Icons.location_on_outlined,    label: 'Site',       value: entry.site),
+          _DetailRow(icon: Icons.calendar_today_outlined, label: 'Issue Date', value: dateStr),
           _DetailRow(
-            icon: entry.isSynced
-                ? Icons.cloud_done_outlined
-                : Icons.cloud_upload_outlined,
+            icon: entry.isSynced ? Icons.cloud_done_outlined : Icons.cloud_upload_outlined,
             label: 'Sync Status',
             value: entry.isSynced ? 'Synced to Firebase' : 'Pending sync',
             valueColor: entry.isSynced ? Colors.green : Colors.amber.shade700,
           ),
-
           const SizedBox(height: 24),
-
-          // Close button
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
@@ -764,13 +538,9 @@ class _DetailSheet extends StatelessWidget {
                 foregroundColor: AppTheme.textPrimary,
                 side: BorderSide(color: Colors.grey.shade300),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Close',
-                  style:
-                      TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              child: const Text('Close', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             ),
           ),
         ],
@@ -779,19 +549,16 @@ class _DetailSheet extends StatelessWidget {
   }
 }
 
-// Single detail row inside the sheet
+// ─────────────────────────────────────────────
+//  _DetailRow
+// ─────────────────────────────────────────────
 class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String   label;
   final String   value;
   final Color?   valueColor;
 
-  const _DetailRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _DetailRow({required this.icon, required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -803,13 +570,7 @@ class _DetailRow extends StatelessWidget {
           const SizedBox(width: 12),
           SizedBox(
             width: 100,
-            child: Text(
-              label,
-              style: TextStyle(
-                color: AppTheme.textSecondary,
-                fontSize: 13,
-              ),
-            ),
+            child: Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
           ),
           Expanded(
             child: Text(
@@ -829,16 +590,15 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  _ExportSheet
+// ─────────────────────────────────────────────
 class _ExportSheet extends StatelessWidget {
   final int      logCount;
   final String   filterLabel;
   final VoidCallback onConfirm;
 
-  const _ExportSheet({
-    required this.logCount,
-    required this.filterLabel,
-    required this.onConfirm,
-  });
+  const _ExportSheet({required this.logCount, required this.filterLabel, required this.onConfirm});
 
   @override
   Widget build(BuildContext context) {
@@ -851,63 +611,32 @@ class _ExportSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
           Center(
             child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 24),
-
-          // Icon
           Container(
-            width: 64,
-            height: 64,
+            width: 64, height: 64,
             decoration: BoxDecoration(
               color: AppTheme.accent.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.table_chart_outlined,
-                color: AppTheme.accent, size: 32),
-          )
-              .animate()
-              .scale(
-                  begin: const Offset(0.7, 0.7),
-                  end: const Offset(1.0, 1.0),
-                  duration: 350.ms,
-                  curve: Curves.easeOutBack),
-
+            child: const Icon(Icons.table_chart_outlined, color: AppTheme.accent, size: 32),
+          ).animate().scale(begin: const Offset(0.7, 0.7), end: const Offset(1.0, 1.0), duration: 350.ms, curve: Curves.easeOutBack),
           const SizedBox(height: 16),
-
-          const Text(
-            'Export to Excel',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          const Text('Export to Excel', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
-
           Text(
             'This will export $logCount ${filterLabel == 'All' ? '' : '$filterLabel '}log entries as an .xlsx file.',
-            style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 14,
-              height: 1.5,
-            ),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.5),
             textAlign: TextAlign.center,
           ),
-
           const SizedBox(height: 28),
-
           Row(
             children: [
-              // Cancel
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
@@ -915,33 +644,23 @@ class _ExportSheet extends StatelessWidget {
                     foregroundColor: AppTheme.textPrimary,
                     side: BorderSide(color: Colors.grey.shade300),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('Cancel',
-                      style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600)),
+                  child: const Text('Cancel', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Export
               Expanded(
                 flex: 2,
                 child: ElevatedButton.icon(
                   onPressed: onConfirm,
                   icon: const Icon(Icons.download_rounded, size: 18),
-                  label: const Text('Export',
-                      style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700)),
+                  label: const Text('Export', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.accent,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
                 ),
@@ -954,6 +673,9 @@ class _ExportSheet extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  _NavItem
+// ─────────────────────────────────────────────
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final IconData activeIcon;
@@ -961,13 +683,7 @@ class _NavItem extends StatelessWidget {
   final bool     isActive;
   final VoidCallback onTap;
 
-  const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
+  const _NavItem({required this.icon, required this.activeIcon, required this.label, required this.isActive, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -990,8 +706,7 @@ class _NavItem extends StatelessWidget {
               style: TextStyle(
                 color: isActive ? Colors.black : AppTheme.textSecondary,
                 fontSize: 11,
-                fontWeight:
-                    isActive ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               ),
             ),
           ],
