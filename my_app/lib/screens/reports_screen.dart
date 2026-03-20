@@ -4,8 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../utils/app_theme.dart';
 import '../models/log_entry.dart';
-import '../main.dart';
-
+import '../services/database_service.dart'; // WHY: real logs replace dummy list
+import '../main.dart'; 
 const Map<String, Color> _kMaterialColors = {
   'Bolts':   Color(0xFF4A90D9),
   'Nuts':    Color(0xFFE8A838),
@@ -26,11 +26,111 @@ final List<LogEntry> _dummyLogs = [
     quantity: 42,
     issuedTo: 'Ravi Kumar',
     countedBy: 'Prajakta',
-    issueDate: DateTime.now(),
+    issueDate: DateTime.now().subtract(const Duration(days: 0)),
     site: 'Site A',
     isSynced: false,
   ),
+  LogEntry(
+    id: 'dummy-2',
+    lotNumber: 'LOT-2024-002',
+    materialType: 'Nuts',
+    quantity: 120,
+    issuedTo: 'Suresh Patil',
+    countedBy: 'Prajakta',
+    issueDate: DateTime.now().subtract(const Duration(days: 1)),
+    site: 'Site A',
+    isSynced: true,
+  ),
+  LogEntry(
+    id: 'dummy-3',
+    lotNumber: 'LOT-2024-003',
+    materialType: 'Washers',
+    quantity: 85,
+    issuedTo: 'Anita Desai',
+    countedBy: 'Prajakta',
+    issueDate: DateTime.now().subtract(const Duration(days: 2)),
+    site: 'Site B',
+    isSynced: true,
+  ),
+  LogEntry(
+    id: 'dummy-4',
+    lotNumber: 'LOT-2024-004',
+    materialType: 'Screws',
+    quantity: 200,
+    issuedTo: 'Mohit Sharma',
+    countedBy: 'Prajakta',
+    issueDate: DateTime.now().subtract(const Duration(days: 3)),
+    site: 'Site B',
+    isSynced: false,
+  ),
+  LogEntry(
+    id: 'dummy-5',
+    lotNumber: 'LOT-2024-005',
+    materialType: 'Clips',
+    quantity: 60,
+    issuedTo: 'Neha Joshi',
+    countedBy: 'Prajakta',
+    issueDate: DateTime.now().subtract(const Duration(days: 5)),
+    site: 'Site A',
+    isSynced: true,
+  ),
+  LogEntry(
+    id: 'dummy-6',
+    lotNumber: 'LOT-2024-006',
+    materialType: 'Bolts',
+    quantity: 95,
+    issuedTo: 'Arjun Mehta',
+    countedBy: 'Prajakta',
+    issueDate: DateTime.now().subtract(const Duration(days: 6)),
+    site: 'Site C',
+    isSynced: true,
+  ),
+  LogEntry(
+    id: 'dummy-7',
+    lotNumber: 'LOT-2024-007',
+    materialType: 'Washers',
+    quantity: 310,
+    issuedTo: 'Divya Rane',
+    countedBy: 'Prajakta',
+    issueDate: DateTime.now().subtract(const Duration(days: 7)),
+    site: 'Site B',
+    isSynced: false,
+  ),
+  LogEntry(
+    id: 'dummy-8',
+    lotNumber: 'LOT-2024-008',
+    materialType: 'Nuts',
+    quantity: 74,
+    issuedTo: 'Sameer Khan',
+    countedBy: 'Prajakta',
+    issueDate: DateTime.now().subtract(const Duration(days: 8)),
+    site: 'Site A',
+    isSynced: true,
+  ),
+  LogEntry(
+    id: 'dummy-9',
+    lotNumber: 'LOT-2024-009',
+    materialType: 'Screws',
+    quantity: 180,
+    issuedTo: 'Pooja Iyer',
+    countedBy: 'Prajakta',
+    issueDate: DateTime.now().subtract(const Duration(days: 10)),
+    site: 'Site C',
+    isSynced: false,
+  ),
+  LogEntry(
+    id: 'dummy-10',
+    lotNumber: 'LOT-2024-010',
+    materialType: 'Other',
+    quantity: 33,
+    issuedTo: 'Rahul Desai',
+    countedBy: 'Prajakta',
+    issueDate: DateTime.now().subtract(const Duration(days: 12)),
+    site: 'Site B',
+    isSynced: true,
+  ),
 ];
+
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -40,18 +140,43 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  String _activeFilter = 'All';
-  bool _newestFirst = true;
 
+  String _activeFilter = 'All';
+  bool   _newestFirst  = true; // true = newest → oldest
+  bool   _isLoading    = true; // true while fetching from DB
+
+  // All filter chip labels
   final List<String> _filters = ['All', ..._kMaterialColors.keys];
 
-  List<LogEntry> get _filteredLogs {
-    var logs = List<LogEntry>.from(_dummyLogs);
+  List<LogEntry> _allLogs = [];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadLogs();
+  }
+
+  Future<void> _loadLogs() async {
+    setState(() => _isLoading = true);
+    final logs = await DatabaseService().getAllLogs();
+    if (!mounted) return;
+    setState(() {
+      _allLogs   = logs;
+      _isLoading = false;
+    });
+  }
+
+  // ── derived list ──────────────────────────
+  List<LogEntry> get _filteredLogs {
+    // Use real DB data — _allLogs populated in initState
+    var logs = List<LogEntry>.from(_allLogs);
+
+    // Filter
     if (_activeFilter != 'All') {
       logs = logs.where((e) => e.materialType == _activeFilter).toList();
     }
 
+    // Sort
     logs.sort((a, b) => _newestFirst
         ? b.issueDate.compareTo(a.issueDate)
         : a.issueDate.compareTo(b.issueDate));
@@ -72,12 +197,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   void _onExportConfirmed() {
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(); 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Excel export coming soon'),
+        content: const Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: Colors.white, size: 16),
+            SizedBox(width: 10),
+            Text('Excel export wired in Step 9'),
+          ],
+        ),
         backgroundColor: AppTheme.primaryDark,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
       ),
+    );
+  }
+
+  void _showDetailSheet(LogEntry entry) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true, // allows taller sheet
+      builder: (_) => _DetailSheet(entry: entry),
     );
   }
 
@@ -87,110 +230,608 @@ class _ReportsScreenState extends State<ReportsScreen> {
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
+            _buildFilterRow(),
+            const SizedBox(height: 8),
             Expanded(child: _buildLogList()),
           ],
         ),
       ),
+      bottomNavigationBar: _buildBottomNav(),
     );
   }
 
   Widget _buildHeader() {
     return Container(
-      color: Colors.white,
+      color: AppTheme.primaryDark,
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
       child: Row(
         children: [
+          // Title + count
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Reports',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Reports',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${_filteredLogs.length} entries',
-                    style: TextStyle(
-                      color: Colors.black.withOpacity(0.5),
-                      fontSize: 13,
-                    ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${_filteredLogs.length} entries',
+                  style: TextStyle(
+                    color: Colors.black.withOpacity(0.45),
+                    fontSize: 13,
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+          Tooltip(
+            message: _newestFirst ? 'Sorted by date: newest first' : 'Sorted by date: oldest first',
+            child: InkWell(
+              onTap: () => setState(() => _newestFirst = !_newestFirst),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Icon(
+                        _newestFirst
+                            ? Icons.arrow_downward_rounded
+                            : Icons.arrow_upward_rounded,
+                        key: ValueKey(_newestFirst),
+                        color: AppTheme.accent,
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _newestFirst ? 'Newest' : 'Oldest',
+                      style: const TextStyle(
+                        color: AppTheme.accent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
 
-          InkWell(
-            onTap: () => setState(() => _newestFirst = !_newestFirst),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              child: Row(
-                children: [
-                  Icon(
-                    _newestFirst
-                        ? Icons.arrow_downward
-                        : Icons.arrow_upward,
-                    color: AppTheme.accent,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    _newestFirst ? 'Newest' : 'Oldest',
-                    style: const TextStyle(
-                      color: AppTheme.accent,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
+          // Export button
           IconButton(
             onPressed: _showExportSheet,
-            icon: const Icon(Icons.share, color: Colors.black),
+            icon: const Icon(
+              Icons.ios_share_rounded,
+              color: AppTheme.accent,
+              size: 22,
+            ),
+            tooltip: 'Export to Excel',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLogList() {
-    final logs = _filteredLogs;
+  // ─────────────────────────────────────────
+  //  Filter chips row
+  // ─────────────────────────────────────────
+  Widget _buildFilterRow() {
+    return Container(
+      color: AppTheme.primaryDark,
+      padding: const EdgeInsets.only(bottom: 14, left: 16, right: 16),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: _filters.map((f) {
+            final isActive = _activeFilter == f;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: GestureDetector(
+                onTap: () => setState(() => _activeFilter = f),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? AppTheme.accent
+                        : Colors.white.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isActive
+                          ? AppTheme.accent
+                          : Colors.white.withOpacity(0.15),
+                    ),
+                  ),
+                  child: Text(
+                    f,
+                    style: TextStyle(
+                      color: isActive
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.65),
+                      fontSize: 13,
+                      fontWeight: isActive
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
 
-    if (logs.isEmpty) {
-      return const Center(child: Text('No logs'));
+  Widget _buildLogList() {
+    // Show spinner while first DB load is in progress
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: AppTheme.accent,
+          strokeWidth: 2,
+        ),
+      );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
+    final logs = _filteredLogs;
+
+    if (logs.isEmpty) return _buildEmptyState();
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       itemCount: logs.length,
-      itemBuilder: (_, i) {
-        final entry = logs[i];
-        return Card(
-          child: ListTile(
-            title: Text(entry.materialType),
-            subtitle: Text(entry.lotNumber),
-            trailing: Text('${entry.quantity}'),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (_, i) => _LogTile(
+        entry: logs[i],
+        onTap: () => _showDetailSheet(logs[i]),
+      )
+          .animate()
+          .fadeIn(delay: (i * 60).ms, duration: 300.ms)
+          .slideY(
+              begin: 0.1,
+              end: 0,
+              delay: (i * 60).ms,
+              duration: 300.ms,
+              curve: Curves.easeOutCubic),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 64,
+              color: AppTheme.textSecondary.withOpacity(0.4),
+            )
+                .animate()
+                .fadeIn(duration: 400.ms)
+                .scaleXY(begin: 0.8, end: 1.0, duration: 400.ms),
+            const SizedBox(height: 16),
+            Text(
+              _activeFilter == 'All'
+                  ? 'No logs yet'
+                  : 'No $_activeFilter logs',
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ).animate().fadeIn(delay: 100.ms),
+            const SizedBox(height: 8),
+            Text(
+              'Start counting hardware to\ncreate your first log entry.',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ).animate().fadeIn(delay: 200.ms),
+            const SizedBox(height: 28),
+            ElevatedButton.icon(
+              onPressed: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.counter),
+              icon: const Icon(Icons.camera_alt_outlined, size: 18),
+              label: const Text('Start Counting'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+            ).animate().fadeIn(delay: 300.ms),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 12,
+            offset: const Offset(0, -3),
           ),
-        );
-      },
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(
+                icon: Icons.home_outlined,
+                activeIcon: Icons.home_rounded,
+                label: 'Home',
+                isActive: false,
+                onTap: () => Navigator.of(context)
+                    .pushReplacementNamed(AppRoutes.dashboard),
+              ),
+              _NavItem(
+                icon: Icons.camera_alt_outlined,
+                activeIcon: Icons.camera_alt_rounded,
+                label: 'Counter',
+                isActive: false,
+                onTap: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.counter),
+              ),
+              _NavItem(
+                icon: Icons.bar_chart_outlined,
+                activeIcon: Icons.bar_chart_rounded,
+                label: 'Reports',
+                isActive: true,
+                onTap: () {}, // already here
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+class _LogTile extends StatelessWidget {
+  final LogEntry entry;
+  final VoidCallback onTap;
+
+  const _LogTile({required this.entry, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color     = _colorFor(entry.materialType);
+    final dateStr   = DateFormat('dd MMM yyyy').format(entry.issueDate);
+
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              // Color dot + material icon
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.hardware_outlined, color: color, size: 22),
+              ),
+              const SizedBox(width: 14),
+
+              // Main info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          entry.materialType,
+                          style: TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Sync badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: entry.isSynced
+                                ? Colors.green.withOpacity(0.12)
+                                : Colors.amber.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                entry.isSynced
+                                    ? Icons.cloud_done_outlined
+                                    : Icons.cloud_upload_outlined,
+                                size: 11,
+                                color: entry.isSynced
+                                    ? Colors.green
+                                    : Colors.amber.shade700,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                entry.isSynced ? 'Synced' : 'Pending',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: entry.isSynced
+                                      ? Colors.green
+                                      : Colors.amber.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${entry.lotNumber} · ${entry.issuedTo}',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      dateStr,
+                      style: TextStyle(
+                        color: AppTheme.textSecondary.withOpacity(0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              // Quantity (big)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${entry.quantity}',
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      height: 1.0,
+                    ),
+                  ),
+                  Text(
+                    'items',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary.withOpacity(0.5),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailSheet extends StatelessWidget {
+  final LogEntry entry;
+  const _DetailSheet({required this.entry});
+
+  @override
+  Widget build(BuildContext context) {
+    final color   = _colorFor(entry.materialType);
+    final dateStr = DateFormat('dd MMM yyyy').format(entry.issueDate);
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Material + quantity hero
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(Icons.hardware_outlined, color: color, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.materialType,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    '${entry.quantity} items counted',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          )
+              .animate()
+              .fadeIn(duration: 300.ms)
+              .slideY(begin: 0.1, end: 0, duration: 300.ms),
+
+          const SizedBox(height: 24),
+          Divider(color: Colors.grey.shade200),
+          const SizedBox(height: 16),
+
+          // Detail rows
+          _DetailRow(icon: Icons.tag_rounded,
+              label: 'Lot Number', value: entry.lotNumber),
+          _DetailRow(icon: Icons.person_outline_rounded,
+              label: 'Issued To', value: entry.issuedTo),
+          _DetailRow(icon: Icons.badge_outlined,
+              label: 'Counted By', value: entry.countedBy),
+          _DetailRow(icon: Icons.location_on_outlined,
+              label: 'Site', value: entry.site),
+          _DetailRow(icon: Icons.calendar_today_outlined,
+              label: 'Issue Date', value: dateStr),
+          _DetailRow(
+            icon: entry.isSynced
+                ? Icons.cloud_done_outlined
+                : Icons.cloud_upload_outlined,
+            label: 'Sync Status',
+            value: entry.isSynced ? 'Synced to Firebase' : 'Pending sync',
+            valueColor: entry.isSynced ? Colors.green : Colors.amber.shade700,
+          ),
+
+          const SizedBox(height: 24),
+
+          // Close button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.textPrimary,
+                side: BorderSide(color: Colors.grey.shade300),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Close',
+                  style:
+                      TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Single detail row inside the sheet
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String   label;
+  final String   value;
+  final Color?   valueColor;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppTheme.textSecondary),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: valueColor ?? AppTheme.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _ExportSheet extends StatelessWidget {
-  final int logCount;
-  final String filterLabel;
+  final int      logCount;
+  final String   filterLabel;
   final VoidCallback onConfirm;
 
   const _ExportSheet({
@@ -202,21 +843,159 @@ class _ExportSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Export $logCount logs'),
-          const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: onConfirm,
-            child: const Text('Export'),
+          // Handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Icon
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppTheme.accent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.table_chart_outlined,
+                color: AppTheme.accent, size: 32),
+          )
+              .animate()
+              .scale(
+                  begin: const Offset(0.7, 0.7),
+                  end: const Offset(1.0, 1.0),
+                  duration: 350.ms,
+                  curve: Curves.easeOutBack),
+
+          const SizedBox(height: 16),
+
+          const Text(
+            'Export to Excel',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          Text(
+            'This will export $logCount ${filterLabel == 'All' ? '' : '$filterLabel '}log entries as an .xlsx file.',
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 14,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+
+          const SizedBox(height: 28),
+
+          Row(
+            children: [
+              // Cancel
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.textPrimary,
+                    side: BorderSide(color: Colors.grey.shade300),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancel',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Export
+              Expanded(
+                flex: 2,
+                child: ElevatedButton.icon(
+                  onPressed: onConfirm,
+                  icon: const Icon(Icons.download_rounded, size: 18),
+                  label: const Text('Export',
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String   label;
+  final bool     isActive;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 80,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isActive ? activeIcon : icon,
+              color: isActive ? Colors.black : AppTheme.textSecondary,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.black : AppTheme.textSecondary,
+                fontSize: 11,
+                fontWeight:
+                    isActive ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../utils/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/database_service.dart'; // WHY: real stats + recent logs
 import '../models/user_model.dart';
 import '../models/log_entry.dart';
 import 'counter_screen.dart';
@@ -19,43 +20,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   late final Future<UserModel> _userFuture;
 
-  final List<LogEntry> _dummyLogs = [
-    LogEntry(
-      id: '1',
-      lotNumber: 'A204',
-      materialType: 'MS Bolts',
-      quantity: 847,
-      issuedTo: 'Team Alpha',
-      countedBy: 'Prajakta',
-      issueDate: DateTime.now(),
-      site: 'Pune Solar Plant 2',
-    ),
-    LogEntry(
-      id: '2',
-      lotNumber: 'B102',
-      materialType: 'GI Washers',
-      quantity: 2340,
-      issuedTo: 'Team Beta',
-      countedBy: 'Prajakta',
-      issueDate: DateTime.now().subtract(const Duration(hours: 2)),
-      site: 'Pune Solar Plant 2',
-    ),
-    LogEntry(
-      id: '3',
-      lotNumber: 'C301',
-      materialType: 'SS Nuts',
-      quantity: 512,
-      issuedTo: 'Team Gamma',
-      countedBy: 'Prajakta',
-      issueDate: DateTime.now().subtract(const Duration(days: 1)),
-      site: 'Pune Solar Plant 2',
-    ),
-  ];
+  // ── real data replacing dummy ─────────────
+  List<LogEntry> _recentLogs = [];
+  LogStats       _stats      = LogStats.empty();
+  bool           _isLoading  = true;
 
   @override
   void initState() {
     super.initState();
     _userFuture = AuthService().getUser();
+    _loadDashboardData();
+  }
+
+  // Called on first load AND when returning from
+  // counter/log form so stats stay fresh
+  Future<void> _loadDashboardData() async {
+    setState(() => _isLoading = true);
+
+    // Run both DB calls in parallel — no need to wait
+    // for one before starting the other
+    final results = await Future.wait([
+      DatabaseService().getRecentLogs(limit: 5),
+      DatabaseService().getStats(),
+    ]);
+
+    if (!mounted) return;
+    setState(() {
+      _recentLogs = results[0] as List<LogEntry>;
+      _stats      = results[1] as LogStats;
+      _isLoading  = false;
+    });
   }
 
   void _onNavTap(int index) {
@@ -64,7 +58,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (index == 1) {
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => const CounterScreen()))
-          .then((_) => setState(() => _selectedIndex = 0));
+          // Refresh stats when returning from counter/log form
+          .then((_) {
+            setState(() => _selectedIndex = 0);
+            _loadDashboardData();
+          });
     } else if (index == 2) {
       Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => const ReportsScreen()))
@@ -106,7 +104,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       const SizedBox(height: AppTheme.spaceMD),
 
-                      _StatsRow()
+                      // Pass real stats — shows live numbers not '—'
+                      _StatsRow(stats: _stats, isLoading: _isLoading)
                           .animate()
                           .fadeIn(duration: 500.ms, delay: 200.ms)
                           .slideY(begin: 0.2, end: 0, curve: Curves.easeOut),
@@ -123,26 +122,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                       const SizedBox(height: AppTheme.spaceMD),
 
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _dummyLogs.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: AppTheme.spaceSM),
-                        itemBuilder: (context, index) {
-                          return _LogTile(entry: _dummyLogs[index])
-                              .animate()
-                              .fadeIn(
-                                duration: 400.ms,
-                                delay: (350 + index * 80).ms,
-                              )
-                              .slideX(
-                                begin: 0.1,
-                                end: 0,
-                                curve: Curves.easeOut,
-                              );
-                        },
-                      ),
+                      // Show spinner while loading, empty state if no logs
+                      _isLoading
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32),
+                                child: CircularProgressIndicator(
+                                  color: AppTheme.accent,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : _recentLogs.isEmpty
+                              ? _buildEmptyLogsState()
+                              : ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _recentLogs.length,
+                                  separatorBuilder: (_, __) =>
+                                      const SizedBox(height: AppTheme.spaceSM),
+                                  itemBuilder: (context, index) {
+                                    return _LogTile(entry: _recentLogs[index])
+                                        .animate()
+                                        .fadeIn(
+                                          duration: 400.ms,
+                                          delay: (350 + index * 80).ms,
+                                        )
+                                        .slideX(
+                                          begin: 0.1,
+                                          end: 0,
+                                          curve: Curves.easeOut,
+                                        );
+                                  },
+                                ),
 
                       const SizedBox(height: AppTheme.spaceXL),
                     ],
@@ -159,8 +171,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+  Widget _buildEmptyLogsState() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      alignment: Alignment.center,
+      child: Column(
+        children: [
+          Icon(
+            Icons.inbox_outlined,
+            size: 48,
+            color: AppTheme.textSecondary.withOpacity(0.35),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No logs yet',
+            style: TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+// ─────────────────────────────────────────────
+//  Top bar — unchanged
+// ─────────────────────────────────────────────
 class _TopBar extends StatelessWidget {
   final String greeting;
   final UserModel user;
@@ -235,7 +274,9 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-
+// ─────────────────────────────────────────────
+//  Start counting card — unchanged
+// ─────────────────────────────────────────────
 class _StartCountingCard extends StatelessWidget {
   final VoidCallback onTap;
   const _StartCountingCard({required this.onTap});
@@ -308,21 +349,30 @@ class _StartCountingCard extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  Stats row — now receives real LogStats
+// ─────────────────────────────────────────────
 class _StatsRow extends StatelessWidget {
+  final LogStats stats;
+  final bool isLoading;
+
+  const _StatsRow({required this.stats, required this.isLoading});
+
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         _StatCard(
-          value: '—',
+          // Show '—' while loading, real number once ready
+          value: isLoading ? '—' : '${stats.logsToday}',
           label: "Today's counts",
           icon: Icons.today_rounded,
           iconColor: AppTheme.accent,
         ),
         const SizedBox(width: AppTheme.spaceMD),
         _StatCard(
-          value: '—',
-          label: 'Total items logged',
+          value: isLoading ? '—' : '${stats.itemsThisWeek}',
+          label: 'Items this week',
           icon: Icons.inventory_2_rounded,
           iconColor: const Color(0xFF6366F1),
         ),
@@ -331,6 +381,9 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+//  Stat card — unchanged
+// ─────────────────────────────────────────────
 class _StatCard extends StatelessWidget {
   final String value;
   final String label;
@@ -397,7 +450,9 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-
+// ─────────────────────────────────────────────
+//  Section header — unchanged
+// ─────────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
   final String title;
   final String actionLabel;
@@ -414,8 +469,6 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // WHY explicit black color: theme textPrimary = dark navy.
-        // Ensures "Recent logs" always shows in dark color on light bg.
         Text(
           title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -439,21 +492,23 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-
+// ─────────────────────────────────────────────
+//  Log tile — unchanged
+// ─────────────────────────────────────────────
 class _LogTile extends StatelessWidget {
   final LogEntry entry;
   const _LogTile({required this.entry});
 
   Color _getColor(String material) {
     final m = material.toLowerCase();
-    if (m.contains('bolt')) return AppTheme.accent;
-    if (m.contains('wash')) return const Color(0xFF6366F1);
-    if (m.contains('nut')) return const Color(0xFFF97316);
+    if (m.contains('bolt'))  return AppTheme.accent;
+    if (m.contains('wash'))  return const Color(0xFF6366F1);
+    if (m.contains('nut'))   return const Color(0xFFF97316);
     return AppTheme.info;
   }
 
   String _formatDate(DateTime date) {
-    final now = DateTime.now();
+    final now  = DateTime.now();
     final diff = now.difference(date);
     if (diff.inHours < 24 && now.day == date.day) {
       return 'Today ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
@@ -480,7 +535,6 @@ class _LogTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Icon
           Container(
             width: 40,
             height: 40,
@@ -490,10 +544,7 @@ class _LogTile extends StatelessWidget {
             ),
             child: Icon(Icons.hardware_rounded, color: color, size: 20),
           ),
-
           const SizedBox(width: AppTheme.spaceMD),
-
-          // Info — WHY Expanded: prevents overflow by constraining text width
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -517,11 +568,7 @@ class _LogTile extends StatelessWidget {
               ],
             ),
           ),
-
           const SizedBox(width: AppTheme.spaceSM),
-
-          // Quantity — WHY fixed column, no Expanded:
-          // quantity is always short (3-5 chars), safe to be fixed width
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -548,7 +595,9 @@ class _LogTile extends StatelessWidget {
   }
 }
 
-
+// ─────────────────────────────────────────────
+//  Bottom nav — unchanged
+// ─────────────────────────────────────────────
 class _BottomNav extends StatelessWidget {
   final int selectedIndex;
   final void Function(int) onTap;
