@@ -8,9 +8,8 @@ import '../utils/app_theme.dart';
 import '../models/log_entry.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
-import '../services/database_service.dart';
-import '../main.dart';
-
+import '../services/database_service.dart'; // WHY: real save replaces debugPrint
+import '../main.dart'; 
 const List<String> _kMaterialOptions = [
   'Bolts',
   'Nuts',
@@ -30,23 +29,28 @@ class LogFormScreen extends StatefulWidget {
 class _LogFormScreenState extends State<LogFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // ── controllers ───────────────────────────
   final _lotNumberCtrl  = TextEditingController();
   final _issuedToCtrl   = TextEditingController();
-  final _otherMatCtrl   = TextEditingController();
+  final _otherMatCtrl   = TextEditingController(); // shown when 'Other' picked
   late  TextEditingController _quantityCtrl;
 
-  String  _selectedMaterial = _kMaterialOptions[0];
+  // ── state ─────────────────────────────────
+  String  _selectedMaterial = _kMaterialOptions[0]; // default: Bolts
   bool    _showOtherField   = false;
   DateTime _issueDate       = DateTime.now();
   bool    _isSaving         = false;
 
+  // ── user data (auto-filled) ───────────────
   UserModel _user = UserModel.empty();
   bool _userLoaded = false;
 
+  // ── args from CounterScreen ───────────────
   int    _countFromCamera = 0;
   String _materialFromCamera = '';
-  bool   _argsRead = false;
+  bool   _argsRead = false; // only read once
 
+  // ─────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -57,6 +61,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Read route args exactly once
     if (!_argsRead) {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is Map) {
@@ -64,10 +69,12 @@ class _LogFormScreenState extends State<LogFormScreen> {
         _materialFromCamera = (args['material'] as String?) ?? '';
       }
 
+      // Pre-fill quantity from camera count
       _quantityCtrl.text = _countFromCamera > 0
           ? _countFromCamera.toString()
           : '';
 
+      // Pre-select material if it matches a known option
       if (_kMaterialOptions.contains(_materialFromCamera)) {
         _selectedMaterial = _materialFromCamera;
       }
@@ -93,9 +100,13 @@ class _LogFormScreenState extends State<LogFormScreen> {
     _quantityCtrl.dispose();
     super.dispose();
   }
-
   Future<void> _pickDate() async {
     FocusScope.of(context).unfocus();
+
+    // Small delay so keyboard fully dismisses before dialog opens
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
+
     final picked = await showDatePicker(
       context: context,
       initialDate: _issueDate,
@@ -110,7 +121,11 @@ class _LogFormScreenState extends State<LogFormScreen> {
         );
         return Theme(
           data: Theme.of(ctx).copyWith(colorScheme: darkScheme),
-          child: child!,
+          
+          child: MediaQuery(
+            data: MediaQuery.of(ctx).copyWith(viewInsets: EdgeInsets.zero),
+            child: child!,
+          ),
         );
       },
     );
@@ -118,14 +133,17 @@ class _LogFormScreenState extends State<LogFormScreen> {
   }
 
   Future<void> _saveLog() async {
+    // Validate all fields
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
 
+    // Resolve final material string
     final String finalMaterial = _selectedMaterial == 'Other'
         ? _otherMatCtrl.text.trim()
         : _selectedMaterial;
 
+    // Build LogEntry
     final entry = LogEntry(
       id:           const Uuid().v4(),
       lotNumber:    _lotNumberCtrl.text.trim(),
@@ -138,11 +156,13 @@ class _LogFormScreenState extends State<LogFormScreen> {
       isSynced:     false,
     );
 
+    // Step 8: real SQLite save — no more fake delay
     await DatabaseService().insertLog(entry);
 
     if (!mounted) return;
     setState(() => _isSaving = false);
 
+    // Navigate to success screen
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => _SuccessScreen(entry: entry),
@@ -157,7 +177,6 @@ class _LogFormScreenState extends State<LogFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
@@ -201,7 +220,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 48),
+          const SizedBox(width: 48), // balance back arrow
         ],
       ),
     );
@@ -213,9 +232,11 @@ class _LogFormScreenState extends State<LogFormScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
         children: [
+          // ── section: hardware details ──
           _sectionLabel('Hardware Details'),
           const SizedBox(height: 12),
 
+          // Lot number
           _buildTextInput(
             controller: _lotNumberCtrl,
             label: 'Lot Number',
@@ -227,11 +248,13 @@ class _LogFormScreenState extends State<LogFormScreen> {
 
           const SizedBox(height: 16),
 
+          // Material type dropdown
           _buildMaterialDropdown()
               .animate()
               .fadeIn(delay: 100.ms)
               .slideY(begin: 0.15, end: 0, delay: 100.ms, duration: 350.ms),
 
+          // 'Other' text field — animated in/out
           AnimatedSize(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
@@ -254,6 +277,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
 
           const SizedBox(height: 16),
 
+          // Quantity
           _buildTextInput(
             controller: _quantityCtrl,
             label: 'Quantity',
@@ -274,9 +298,11 @@ class _LogFormScreenState extends State<LogFormScreen> {
 
           const SizedBox(height: 28),
 
+          // ── section: issue details ──
           _sectionLabel('Issue Details'),
           const SizedBox(height: 12),
 
+          // Issued to
           _buildTextInput(
             controller: _issuedToCtrl,
             label: 'Issued To',
@@ -291,6 +317,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
 
           const SizedBox(height: 16),
 
+          // Issue date
           _buildDateField()
               .animate()
               .fadeIn(delay: 250.ms)
@@ -298,9 +325,11 @@ class _LogFormScreenState extends State<LogFormScreen> {
 
           const SizedBox(height: 28),
 
+          // ── section: auto-filled ──
           _sectionLabel('Auto-filled from Profile'),
           const SizedBox(height: 12),
 
+          // Counted by (read-only)
           _buildReadOnlyField(
             label: 'Counted By',
             value: _user.name.isNotEmpty ? _user.name : '—',
@@ -312,6 +341,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
 
           const SizedBox(height: 16),
 
+          // Site (read-only)
           _buildReadOnlyField(
             label: 'Site',
             value: _user.site.isNotEmpty ? _user.site : '—',
@@ -323,6 +353,7 @@ class _LogFormScreenState extends State<LogFormScreen> {
 
           const SizedBox(height: 36),
 
+          // ── save button ──
           _buildSaveButton()
               .animate()
               .fadeIn(delay: 400.ms)
@@ -331,7 +362,6 @@ class _LogFormScreenState extends State<LogFormScreen> {
       ),
     );
   }
-
   Widget _sectionLabel(String text) {
     return Text(
       text.toUpperCase(),
@@ -396,7 +426,6 @@ class _LogFormScreenState extends State<LogFormScreen> {
       ),
     );
   }
-
   Widget _buildMaterialDropdown() {
     return DropdownButtonFormField<String>(
       value: _selectedMaterial,
@@ -437,7 +466,6 @@ class _LogFormScreenState extends State<LogFormScreen> {
       ),
     );
   }
-
   Widget _buildDateField() {
     final formatted = DateFormat('dd MMM yyyy').format(_issueDate);
     return GestureDetector(
@@ -492,23 +520,33 @@ class _LogFormScreenState extends State<LogFormScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.black, size: 22),
+          Icon(
+            icon,
+            color: Colors.black,
+            size: 22,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500)),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(value,
-                    style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600)),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
@@ -516,7 +554,6 @@ class _LogFormScreenState extends State<LogFormScreen> {
       ),
     );
   }
-
   Widget _buildSaveButton() {
     return SizedBox(
       width: double.infinity,
@@ -573,11 +610,12 @@ class _SuccessScreenState extends State<_SuccessScreen> {
   @override
   void initState() {
     super.initState();
+    // Auto-navigate after 2.5 seconds
     Future.delayed(const Duration(milliseconds: 2500), () {
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil(
         AppRoutes.dashboard,
-        (route) => false,
+        (route) => false, // clear entire back stack
       );
     });
   }
@@ -593,6 +631,7 @@ class _SuccessScreenState extends State<_SuccessScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Animated check icon
                 Container(
                   width: 96,
                   height: 96,
@@ -637,6 +676,7 @@ class _SuccessScreenState extends State<_SuccessScreen> {
 
                 const SizedBox(height: 12),
 
+                // Summary line
                 Text(
                   '${widget.entry.quantity} ${widget.entry.materialType} · ${widget.entry.lotNumber}',
                   style: TextStyle(
@@ -650,6 +690,7 @@ class _SuccessScreenState extends State<_SuccessScreen> {
 
                 const SizedBox(height: 48),
 
+                // Returning to dashboard indicator
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

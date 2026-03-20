@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "954950022199",
+    "project_id": "nexcount-ccafd",
+    "storage_bucket": "nexcount-ccafd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:954950022199:android:739be928751bcec90cfbb2",
+        "android_client_info": {
+          "package_name": "com.nexcount.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrHcvMO9cVsrnUYfeqzbP0AjJxSZF-ZOo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
